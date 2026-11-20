@@ -97,6 +97,18 @@
   .step{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px;color:var(--muted);font-size:15px}
   .step button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:20px;cursor:pointer}
   .step b{color:var(--fg);font-size:18px;min-width:48px;text-align:center}
+  /* 버튼 체크판 */
+  .bbar{position:sticky;top:0;z-index:5;background:var(--bg);padding:8px 0 10px}
+  .bh{display:flex;justify-content:space-between;align-items:baseline;font-size:20px;font-weight:700;color:var(--muted);margin-top:18px}
+  .bh span{font-size:15px;font-weight:500}
+  .bh.full{color:var(--ok)}
+  .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:8px}
+  .bb{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:76px;padding:8px 5px;
+    border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--fg);font-family:inherit;font-size:16px;font-weight:700;
+    line-height:1.25;word-break:keep-all;overflow-wrap:anywhere;cursor:pointer;user-select:none}
+  .bb small{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-bottom:3px}
+  .bb.on{background:var(--ok);border-color:var(--ok);color:#fff}
+  .bb.on small{color:rgba(255,255,255,.8)}
 </style>
 </head>
 <body>
@@ -135,6 +147,7 @@
   var app = document.getElementById('app');
   var flat = [], results = [], idx = 0, phase = 'home', mode = 'manual', lastGrp = null;
   var quickTimer = null, paused = false, editState = null, saveStatus = '', renderSeq = 0;
+  var SHOW_QUICK = false; // 빠른 음성 체크 버튼·간격 설정 표시 여부 (지금은 숨김)
 
   // ---------- 음성 ----------
   function speak(text, onDone){
@@ -329,8 +342,11 @@
       '<div style="flex:1;min-height:16px"></div>'+
       '<div class="muted" style="text-align:center">'+enabledGroups().length+'개 묶음 · '+flat.length+'개 항목</div>'+
       '<button class="btn primary" id="startManual" '+(flat.length?'':'disabled')+'>하나씩 체크</button>'+
+      '<button class="btn primary" id="startBoard" style="background:#0d9488" '+(flat.length?'':'disabled')+'>버튼 체크판</button>'+
+      '<div'+(SHOW_QUICK?'':' style="display:none"')+'>'+
       '<button class="btn primary" id="startQuick" style="background:#7c3aed" '+(flat.length?'':'disabled')+'>빠른 음성 체크</button>'+
-      '<div class="step"><span>항목 간격</span><button id="iv-">−</button><b>'+interval.toFixed(1)+'초</b><button id="iv+">＋</button></div>';
+      '<div class="step"><span>항목 간격</span><button id="iv-">−</button><b>'+interval.toFixed(1)+'초</b><button id="iv+">＋</button></div>'+
+      '</div>';
     bindVoice();
     var y = window.scrollY;
     function rerender(){ renderHome(); window.scrollTo(0, y); }
@@ -428,6 +444,7 @@
     document.getElementById('iv+').onclick = function(){ interval = Math.min(10, Math.round((interval + 0.5)*2)/2); ls(LS.interval, String(interval)); rerender(); };
     document.getElementById('startManual').onclick = function(){ startCheck('manual'); };
     document.getElementById('startQuick').onclick = function(){ startCheck('quick'); };
+    document.getElementById('startBoard').onclick = startBoard;
   }
 
   // 이동 실행. from:{kind,gi,p} to:{kind,gi,p} where: before|after|child|end
@@ -501,6 +518,46 @@
     document.getElementById('quit').onclick = function(){ clearQuick(); stopSpeak(); renderHome(); };
     var pb = document.getElementById('pause');
     if(pb) pb.onclick = function(){ paused = !paused; clearQuick(); stopSpeak(); lastGrp = null; renderItem(); };
+  }
+
+  // ---------- 버튼 체크판 ----------
+  function startBoard(){
+    mode = 'board'; phase = 'board'; editState = null; clearQuick(); stopSpeak();
+    for(var i=0;i<results.length;i++) results[i] = null;
+    renderBoard(); window.scrollTo(0, 0);
+  }
+  function renderBoard(){
+    var secs = [], cur = null;
+    flat.forEach(function(it, i){ if(!cur || cur.grp !== it.grp){ cur = {grp: it.grp, idxs: []}; secs.push(cur); } cur.idxs.push(i); });
+    app.innerHTML =
+      '<div class="bbar"><div class="top"><div class="muted"><b style="color:#2dd4bf">버튼 체크판</b> <span id="bcnt"></span></div><button class="toggle" id="bquit">그만두기</button></div>'+
+      '<div class="prog"><div id="bprog" style="width:0"></div></div></div>'+
+      '<div class="muted">챙긴 장비를 누르세요. 다시 누르면 취소됩니다.</div>'+
+      secs.map(function(s, si){
+        return '<div class="bh" data-s="'+si+'"><div>'+h(s.grp)+'</div><span></span></div><div class="board">'+
+          s.idxs.map(function(i){ var it = flat[i]; return '<button class="bb" data-b="'+i+'">'+(it.path.length ? '<small>'+h(it.path[it.path.length-1])+' ›</small>' : '')+h(it.name)+'</button>'; }).join('')+'</div>';
+      }).join('')+
+      '<div style="height:24px"></div>';
+    function refresh(){
+      var done = 0; results.forEach(function(r){ if(r === 'ok') done++; });
+      document.getElementById('bcnt').textContent = done + ' / ' + flat.length;
+      document.getElementById('bprog').style.width = (flat.length ? Math.round(done / flat.length * 100) : 0) + '%';
+      secs.forEach(function(s, si){
+        var n = 0; s.idxs.forEach(function(i){ if(results[i] === 'ok') n++; });
+        var hd = app.querySelector('.bh[data-s="'+si+'"]');
+        hd.className = 'bh' + (n === s.idxs.length ? ' full' : ''); hd.lastChild.textContent = n + '/' + s.idxs.length;
+      });
+      return done;
+    }
+    var bs = app.querySelectorAll('.bb');
+    for(var k=0;k<bs.length;k++){ bs[k].onclick = function(){
+      var i = +this.getAttribute('data-b');
+      results[i] = results[i] === 'ok' ? null : 'ok';
+      this.className = 'bb' + (results[i] === 'ok' ? ' on' : '');
+      if(refresh() === flat.length){ setTimeout(function(){ if(phase === 'board' && results.every(function(r){ return r === 'ok'; })){ renderDone(); window.scrollTo(0, 0); } }, 350); }
+    }; }
+    document.getElementById('bquit').onclick = renderHome;
+    refresh();
   }
 
   function label(i){ var it = flat[i]; return (it.path.length ? it.path[it.path.length-1] + ' › ' : '') + it.name; }
