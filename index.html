@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex,nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>출발 전 체크</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --fg:#f2f4f8; --muted:#9aa3b2;
+    --ok:#22a06b; --no:#e5484d; --skip:#4b5263; --accent:#3b82f6; --warn:#f5a524;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+    font-size:18px;line-height:1.4}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  #app{max-width:560px;margin:0 auto;padding:16px;min-height:100vh;display:flex;flex-direction:column}
+  h1{font-size:22px;margin:8px 0 4px}
+  .muted{color:var(--muted);font-size:15px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .btn{display:block;width:100%;border:0;border-radius:14px;padding:18px 16px;font-size:20px;font-weight:700;
+    color:#fff;cursor:pointer;margin-top:12px;min-height:68px}
+  .btn:active{filter:brightness(.85)}
+  .btn.ok{background:var(--ok);min-height:96px;font-size:28px} .btn.skip{background:var(--skip)}
+  .btn.primary{background:var(--accent);min-height:76px;font-size:22px}
+  .btn.primary:disabled{opacity:.4}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:500;font-size:16px;min-height:48px;padding:10px}
+  .btn.warn{background:transparent;border:1px solid var(--warn);color:var(--warn);font-weight:600;font-size:17px;min-height:52px;padding:10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px}
+  .item{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:20px 8px}
+  .grp{color:var(--muted);font-size:15px;margin-bottom:6px}
+  .crumb{color:var(--accent);font-size:17px;margin-bottom:8px}
+  .name{font-size:38px;font-weight:800;line-height:1.15;word-break:keep-all}
+  .name.child{font-size:34px}
+  .prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:10px}
+  .prog > div{height:100%;background:var(--accent);transition:width .2s}
+  .tick{height:4px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:14px}
+  .tick > div{height:100%;background:var(--ok);width:0}
+  textarea{width:100%;min-height:55vh;background:var(--card);color:var(--fg);border:1px solid var(--line);
+    border-radius:12px;padding:12px;font-size:16px;font-family:ui-monospace,Menlo,monospace;line-height:1.5;white-space:pre;overflow:auto}
+  ul{padding-left:20px;margin:8px 0} li{margin:4px 0}
+  .status{font-size:14px;color:var(--muted);margin-top:8px;min-height:20px}
+  .row{display:flex;gap:10px} .row .btn{flex:1}
+  .toggle{font-size:14px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:6px 12px;background:transparent;cursor:pointer;white-space:nowrap}
+  .toggle.on{color:#fff;border-color:var(--accent);background:rgba(59,130,246,.2)}
+  .fade{animation:f .15s ease-out} @keyframes f{from{opacity:.3}to{opacity:1}}
+  code{background:var(--card);padding:1px 6px;border-radius:5px;font-size:14px}
+  .links{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:15px}
+  .links a{color:var(--accent);cursor:pointer;text-decoration:underline}
+  /* 묶음(1단계: 크게) */
+  .glist{margin-top:10px}
+  .g{display:flex;align-items:center;gap:10px;padding:12px 0 12px 12px;border:1px solid var(--line);border-radius:12px;
+    background:var(--card);margin-top:8px;cursor:pointer;user-select:none}
+  .g.off{opacity:.45}
+  .g .box{width:28px;height:28px;border-radius:8px;border:2px solid var(--muted);flex:0 0 28px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .g.on .box{background:var(--accent);border-color:var(--accent)}
+  .g .gn{flex:1;font-weight:700;font-size:18px;min-width:0}
+  .g .gc{color:var(--muted);font-size:14px;white-space:nowrap}
+  .g .arrow{flex:0 0 46px;align-self:stretch;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;border-left:1px solid var(--line);margin:-12px 0}
+  /* 세부 항목(2단계: 작게) */
+  .gitems{margin:0 0 0 14px;padding:4px 0 6px 10px;border-left:2px solid var(--line)}
+  .it{display:flex;align-items:center;gap:10px;padding:9px 6px;font-size:16px;cursor:pointer;user-select:none;border-radius:8px}
+  .it .box{width:22px;height:22px;border-radius:6px;border:2px solid var(--muted);flex:0 0 22px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff}
+  .it.on .box{background:var(--accent);border-color:var(--accent)}
+  .it.off{opacity:.4}
+  .it.dim{opacity:.25}
+  .it.d1{padding-left:28px} .it.d2{padding-left:50px} .it.d3{padding-left:72px}
+  .it .tr{color:var(--muted);font-size:13px;margin-right:-4px}
+  .it .nm{flex:1;min-width:0}
+  /* 수정·삭제 작은 글씨 */
+  .acts{display:inline-flex;gap:8px;font-size:11px;font-weight:500;margin-left:10px;vertical-align:middle;white-space:nowrap}
+  .acts a{color:var(--muted);cursor:pointer;opacity:.8} .acts a.del{color:var(--no)}
+  .add{display:block;padding:8px 6px;font-size:14px;color:var(--accent);cursor:pointer;user-select:none}
+  .moving{outline:2px solid var(--warn);outline-offset:-2px;opacity:1 !important}
+  .banner{position:sticky;top:0;z-index:5;background:#3b2f12;border:1px solid var(--warn);color:#ffd47a;border-radius:12px;padding:10px 12px;margin-top:10px;font-size:15px;display:flex;align-items:center;gap:10px}
+  .banner b{flex:1}
+  .banner button{border:0;border-radius:8px;padding:8px 12px;background:var(--skip);color:#fff;font-size:14px;cursor:pointer}
+  .pick{display:flex;flex-wrap:wrap;gap:8px;padding:8px 6px 10px 34px}
+  .pick button{border:1px solid var(--warn);background:transparent;color:#ffd47a;border-radius:8px;padding:9px 12px;font-size:14px;font-weight:600;cursor:pointer}
+  .pick button.x{border-color:var(--line);color:var(--muted)}
+  .add.g{display:flex;justify-content:center;align-items:center;border-style:dashed;cursor:pointer;color:var(--accent);font-weight:600;font-size:16px;padding:12px}
+  .ed{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 6px}
+  .ed input,.ed select{flex:1;min-width:120px;background:var(--bg);color:var(--fg);border:1px solid var(--accent);border-radius:8px;padding:10px;font-size:16px;font-family:inherit}
+  .ed button{border:0;border-radius:8px;padding:10px 14px;font-size:15px;font-weight:700;color:#fff;background:var(--accent);cursor:pointer}
+  .ed button.x{background:var(--skip)} .ed button.d{background:var(--no)}
+  .ed .q{color:var(--no);font-size:14px;flex:1}
+  /* 프리셋 */
+  .presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+  .chip{border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:9px 16px;font-size:16px;font-weight:600;cursor:pointer;user-select:none}
+  .chip.on{border-color:var(--accent);background:rgba(59,130,246,.25)}
+  .chip.plus{color:var(--accent);border-style:dashed;background:transparent}
+  .pacts{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:13px;align-items:center;min-height:20px}
+  .pacts a{color:var(--muted);cursor:pointer;text-decoration:underline} .pacts a.del{color:var(--no)}
+  .pacts .chg{color:var(--warn)}
+  /* 간격 설정 */
+  .step{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px;color:var(--muted);font-size:15px}
+  .step button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);font-size:20px;cursor:pointer}
+  .step b{color:var(--fg);font-size:18px;min-width:48px;text-align:center}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script id="data" type="application/json">/*DATA-START*/{"title":"출발 전 체크","groups":[{"name":"콘솔·시스템","items":[{"name":"믹싱 콘솔","children":[]},{"name":"스테이지박스","children":[{"name":"랜 케이블","children":[]}]}]},{"name":"메인 스피커","items":[{"name":"메인 스피커","children":[{"name":"스피커 케이블 (BRX의 경우 4심 케이블 확인)","children":[]}]},{"name":"앰프","children":[]}]},{"name":"모니터 스피커","items":[{"name":"패시브","children":[{"name":"앰프","children":[]}]},{"name":"액티브","children":[]}]},{"name":"무선 마이크","items":[{"name":"무선 송신기(핸드·바디팩)","children":[{"name":"핀·헤드셋 마이크","children":[]}]},{"name":"무선 수신기","children":[{"name":"안테나","children":[]}]}]},{"name":"유선 마이크","items":[{"name":"PZM","children":[]},{"name":"합창용","children":[]},{"name":"악기 마이크","children":[]},{"name":"DI","children":[]}]},{"name":"케이블","items":[{"name":"스피커 케이블","children":[]},{"name":"XLR","children":[]},{"name":"멀티 케이블","children":[]},{"name":"전기선","children":[]},{"name":"악기용 케이블","children":[]},{"name":"3.5 케이블","children":[]}]},{"name":"ETC","items":[{"name":"플레이백 노트북","children":[]},{"name":"잡선 박스","children":[]},{"name":"공구가방","children":[]},{"name":"배터리","children":[]},{"name":"게퍼 테이프","children":[]},{"name":"케이블 타이","children":[]}]},{"name":"파워뱅크","items":[{"name":"파워뱅크(일반)","children":[]},{"name":"파워뱅크(소형)","children":[]}]}],"presets":[{"name":"집회","goff":[],"ioff":[]},{"name":"연극","goff":[],"ioff":[]},{"name":"밴드","goff":[],"ioff":[]},{"name":"방송차","goff":[],"ioff":[]}],"defaultPreset":"방송차"}/*DATA-END*/</script>
+
+<script>
+(function(){
+  var PRISTINE = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  var DATA_RE = /\/\*DATA-START\*\/[\s\S]*?\/\*DATA-END\*\//;
+  var LS = {list:'dc_list_override', voice:'dc_voice', goff:'dc_groups_off', ioff:'dc_items_off', open:'dc_groups_open', interval:'dc_interval', preset:'dc_preset', init:'dc_init', rev:'dc_list_rev'};
+
+  function ls(k, v){ try{ if(v===undefined) return localStorage.getItem(k); if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v);}catch(e){ return null; } }
+  function lsObj(k){ try{ return JSON.parse(ls(k) || '{}') || {}; }catch(e){ return {}; } }
+  function save(k, o){ ls(k, JSON.stringify(o)); }
+
+  var shared = JSON.parse(document.getElementById('data').textContent.replace('/*DATA-START*/','').replace('/*DATA-END*/',''));
+  var data = shared, localOverride = false;
+  try{ var o = ls(LS.list); if(o){ if(ls(LS.rev) !== String(shared.rev || 0)){ ls(LS.list, null); } else { data = JSON.parse(o); localOverride = true; } } }catch(e){}
+
+  var voiceOn = ls(LS.voice) !== 'off';
+  var groupsOff = lsObj(LS.goff), itemsOff = lsObj(LS.ioff), groupsOpen = lsObj(LS.open);
+  var interval = parseFloat(ls(LS.interval)); if(!(interval > 0)) interval = 2;
+  var activePreset = ls(LS.preset) || '';
+  function presets(){ if(!data.presets) data.presets = []; return data.presets; }
+  function findPreset(name){ var ps = presets(); for(var i=0;i<ps.length;i++){ if(ps[i].name === name) return ps[i]; } return null; }
+  function currentSel(){ return {goff: Object.keys(groupsOff).sort(), ioff: Object.keys(itemsOff).sort()}; }
+  function applySel(p){ groupsOff = {}; itemsOff = {}; (p.goff||[]).forEach(function(n){ groupsOff[n]=1; }); (p.ioff||[]).forEach(function(k){ itemsOff[k]=1; }); save(LS.goff, groupsOff); save(LS.ioff, itemsOff); }
+  // 이 기기에서 처음 열면 기본 프리셋 상태로 시작
+  if(ls(LS.init) === null){ var dp0 = findPreset(data.defaultPreset || ''); if(dp0){ activePreset = dp0.name; ls(LS.preset, dp0.name); applySel(dp0); } ls(LS.init, '1'); }
+  function selChanged(p){ var c = currentSel(); return JSON.stringify(c.goff) !== JSON.stringify((p.goff||[]).slice().sort()) || JSON.stringify(c.ioff) !== JSON.stringify((p.ioff||[]).slice().sort()); }
+  var SEP = '\u0001';
+  function itemKey(grp, path, name){ return grp + SEP + path.concat(name).join(SEP); }
+
+  var app = document.getElementById('app');
+  var flat = [], results = [], idx = 0, phase = 'home', mode = 'manual', lastGrp = null;
+  var quickTimer = null, paused = false, editState = null, saveStatus = '', renderSeq = 0;
+
+  // ---------- 음성 ----------
+  function speak(text, onDone){
+    var done = false, fin = function(){ if(done) return; done = true; if(onDone) onDone(); };
+    if(!voiceOn || !('speechSynthesis' in window)){ setTimeout(fin, 50); return; }
+    try{
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ko-KR'; u.rate = 1.05;
+      var vs = speechSynthesis.getVoices() || [];
+      for(var i=0;i<vs.length;i++){ var l=(vs[i].lang||'').replace('_','-').toLowerCase(); if(l.indexOf('ko')===0){ u.voice=vs[i]; break; } }
+      u.onend = fin; u.onerror = fin;
+      setTimeout(function(){ speechSynthesis.speak(u); }, 30);
+      setTimeout(fin, 1500 + text.length * 180); // onend 미발생 대비
+    }catch(e){ fin(); }
+  }
+  function stopSpeak(){ try{ speechSynthesis.cancel(); }catch(e){} }
+  function clearQuick(){ if(quickTimer){ clearTimeout(quickTimer); quickTimer = null; } }
+
+  // ---------- 데이터 ----------
+  function countItems(items){ var n=0; items.forEach(function(it){ n += 1 + countItems(it.children||[]); }); return n; }
+  function enabledGroups(){ return data.groups.filter(function(g){ return !groupsOff[g.name]; }); }
+  function buildFlat(){
+    flat = []; results = [];
+    enabledGroups().forEach(function(g){
+      (function walk(items, path){
+        items.forEach(function(it){
+          if(itemsOff[itemKey(g.name, path, it.name)]) return;
+          flat.push({grp:g.name, name:it.name, path:path.slice()});
+          results.push(null);
+          walk(it.children||[], path.concat(it.name));
+        });
+      })(g.items, []);
+    });
+  }
+  function countOn(g){ var n=0; (function walk(items, path){ items.forEach(function(it){ if(itemsOff[itemKey(g.name, path, it.name)]) return; n++; walk(it.children||[], path.concat(it.name)); }); })(g.items, []); return n; }
+  // sel: {goff:[묶음명], ioff:[키]} — 꺼진 것은 이름 앞에 "x " 표시
+  function toText(d, sel){
+    var goff = {}, ioff = {}; if(sel){ (sel.goff||[]).forEach(function(n){ goff[n]=1; }); (sel.ioff||[]).forEach(function(k){ ioff[k]=1; }); }
+    return d.groups.map(function(g){
+      var lines = ['# ' + (goff[g.name] ? 'x ' : '') + g.name];
+      (function walk(items, path, depth){ items.forEach(function(it){ var off = ioff[itemKey(g.name, path, it.name)]; lines.push(new Array(depth+1).join('  ') + (off ? 'x ' : '') + it.name); walk(it.children||[], path.concat(it.name), depth+1); }); })(g.items, [], 0);
+      return lines.join('\n');
+    }).join('\n\n');
+  }
+  function fromText(t){
+    var groups = [], cur = null, stack = [], goff = [], ioff = [], curPath = [];
+    t.split(/\r?\n/).forEach(function(raw){
+      if(!raw.trim()) return;
+      var m = raw.match(/^(\s*)(>*)\s*(.*)$/);
+      var ws = m[1].replace(/\t/g, '  '), gt = m[2], body = m[3].trim();
+      if(!body) return;
+      var off = false;
+      if(body.charAt(0) === '#'){
+        body = body.replace(/^#+\s*/,'');
+        if(/^x\s+/i.test(body)){ off = true; body = body.replace(/^x\s+/i,''); }
+        cur = {name: body, items: []}; groups.push(cur); stack = []; curPath = [];
+        if(off) goff.push(body); return;
+      }
+      if(/^x\s+/i.test(body)){ off = true; body = body.replace(/^x\s+/i,''); }
+      if(!cur){ cur = {name:'기본', items:[]}; groups.push(cur); }
+      var depth = gt.length ? gt.length : Math.floor(ws.length / 2);
+      var node = {name: body, children: []};
+      if(depth > stack.length) depth = stack.length;
+      stack = stack.slice(0, depth); curPath = curPath.slice(0, depth);
+      if(depth === 0) cur.items.push(node); else stack[depth-1].children.push(node);
+      stack.push(node);
+      if(off) ioff.push(itemKey(cur.name, curPath, body));
+      curPath.push(body);
+    });
+    return {title: data.title, groups: groups, presets: data.presets || [], goff: goff, ioff: ioff};
+  }
+  // 목록 구조가 바뀐 뒤, 존재하지 않는 이름을 가리키는 프리셋 기록 정리
+  function pruneSel(nd, sel){
+    var valid = {}, gv = {};
+    nd.groups.forEach(function(g){ gv[g.name] = 1; (function walk(items, path){ items.forEach(function(it){ valid[itemKey(g.name, path, it.name)] = 1; walk(it.children||[], path.concat(it.name)); }); })(g.items, []); });
+    return {goff: (sel.goff||[]).filter(function(n){ return gv[n]; }), ioff: (sel.ioff||[]).filter(function(k){ return valid[k]; })};
+  }
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  function nodeAt(g, path){ // path: 이름 배열 → {node, list}
+    var list = g.items, node = null;
+    for(var i=0;i<path.length;i++){ node = null; for(var j=0;j<list.length;j++){ if(list[j].name === path[i]){ node = list[j]; break; } } if(!node) return null; list = node.children; }
+    return {node:node, list:list};
+  }
+  // 이름 바꿀 때 켜짐/꺼짐 기록을 새 이름으로 옮김
+  function mapKey(k, oldPre, newPre){ if(k === oldPre) return newPre; if(k.indexOf(oldPre + SEP) === 0) return newPre + k.slice(oldPre.length); return k; }
+  function migrate(oldPre, newPre, nd){
+    var n = {}; Object.keys(itemsOff).forEach(function(k){ n[mapKey(k, oldPre, newPre)] = 1; });
+    itemsOff = n; save(LS.ioff, itemsOff);
+    if(nd && nd.presets) nd.presets.forEach(function(p){ p.ioff = (p.ioff||[]).map(function(k){ return mapKey(k, oldPre, newPre); }); });
+  }
+  function migrateGroupName(nd, oldName, newName){ (nd.presets||[]).forEach(function(p){ p.goff = (p.goff||[]).map(function(n){ return n === oldName ? newName : n; }); }); }
+
+  // ---------- 저장(공유 발행) ----------
+  function saveList(newData, onLocal){
+    save(LS.list, newData); ls(LS.rev, String(shared.rev || 0)); data = newData; localOverride = true;
+    saveStatus = '이 기기에 저장됨. 모두에게 반영하려면 "배포용 파일 받기" 후 다시 올리세요.';
+    if(onLocal) onLocal(false);
+  }
+  function exportHtml(){
+    var nd = clone(data); nd.rev = Date.now();
+    var json = JSON.stringify(nd).replace(/<\//g, '<\\/');
+    var html = PRISTINE.replace(DATA_RE, function(){ return '/*DATA-START*/' + json + '/*DATA-END*/'; });
+    try{
+      var url = URL.createObjectURL(new Blob([html], {type:'text/html'}));
+      var a = document.createElement('a'); a.href = url; a.download = 'index.html'; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+      saveStatus = 'index.html 내려받음. 호스팅에 덮어 올리면 모두에게 반영됩니다.';
+    }catch(e){ saveStatus = '내려받기 실패: 이 브라우저에서 파일 저장이 막혀 있습니다.'; }
+  }
+  function commit(newData){ data = newData; editState = null; saveList(newData, function(){ if(phase === 'home') renderHome(); }); if(phase === 'home') renderHome(); }
+
+  // ---------- 공통 ----------
+  function h(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  function voiceBtn(){ return '<button class="toggle '+(voiceOn?'on':'')+'" id="voice">'+(voiceOn?'🔊 음성 켜짐':'🔇 음성 꺼짐')+'</button>'; }
+  function bindVoice(){ var b=document.getElementById('voice'); if(b) b.onclick=function(){ voiceOn=!voiceOn; ls(LS.voice, voiceOn?'on':'off'); b.className='toggle '+(voiceOn?'on':''); b.textContent=voiceOn?'🔊 음성 켜짐':'🔇 음성 꺼짐'; if(voiceOn) speak('음성 켜짐'); else stopSpeak(); }; }
+  function stop(ev){ ev.stopPropagation(); }
+
+  // ---------- 기본 화면 ----------
+  function renderHome(){
+    phase = 'home'; clearQuick(); buildFlat();
+    var es = editState || {};
+    var moving = (es.type === 'move' || es.type === 'movePick') ? es.from : null;
+    function acts(type, i, path){ if(moving) return ''; var a = ' data-type="'+type+'" data-i="'+i+'" data-p="'+h(path||'')+'"'; return '<span class="acts"><a data-act="edit"'+a+'>수정</a><a data-act="move"'+a+'>이동</a><a class="del" data-act="del"'+a+'>삭제</a></span>'; }
+    function isMovingSelf(kind, gi, p){ if(!moving || moving.kind !== kind || moving.gi !== gi) return false; if(kind === 'group') return true; return p === moving.p || p.indexOf(moving.p + SEP) === 0; }
+    function pickRow(kind){ // 목적지 선택 후 위치 고르기
+      var b = kind === 'group'
+        ? (moving.kind === 'group' ? '<button data-w="before">위에</button><button data-w="after">아래에</button>' : '<button data-w="end">이 묶음 맨 아래로</button>')
+        : '<button data-w="before">위에</button><button data-w="after">아래에</button><button data-w="child">자식으로</button>';
+      return '<div class="pick" data-ed="1">'+b+'<button class="x" id="edx">취소</button></div>';
+    }
+    function edRow(kind, val, extra){ // 인라인 입력
+      return '<div class="ed" data-ed="1">'+(extra||'')+'<input id="edin" value="'+h(val||'')+'" placeholder="이름"><button id="edok">'+(kind==='add'?'추가':'저장')+'</button><button class="x" id="edx">취소</button></div>';
+    }
+    function delRow(what){ return '<div class="ed" data-ed="1"><span class="q">'+h(what)+' 삭제할까요?'+'</span><button class="d" id="edok">삭제</button><button class="x" id="edx">취소</button></div>'; }
+    function itemRows(g, gi, items, path, depth, ancestorOff){
+      return items.map(function(it){
+        var k = itemKey(g.name, path, it.name), off = !!itemsOff[k], p = path.concat(it.name).join(SEP);
+        var cls = 'it d' + Math.min(depth, 3) + (off ? ' off' : ' on') + (ancestorOff ? ' dim' : '');
+        var row;
+        if(es.type === 'item' && es.gi === gi && es.p === p) row = '<div class="'+cls+'" style="cursor:default">'+edRow('edit', it.name)+'</div>';
+        else if(es.type === 'delItem' && es.gi === gi && es.p === p) row = '<div class="'+cls+'" style="cursor:default">'+delRow(it.name)+'</div>';
+        else {
+          var self = isMovingSelf('item', gi, p);
+          row = '<div class="'+cls+(self?' moving':'')+'" data-k="'+h(k)+'" data-tgt="item" data-i="'+gi+'" data-p="'+h(p)+'"'+(self?' data-self="1"':'')+'><div class="box">'+(off?'':'✓')+'</div>'+(depth?'<span class="tr">└</span>':'')+'<span class="nm">'+h(it.name)+acts('item', gi, p)+'</span></div>';
+          if(es.type === 'movePick' && es.to.kind === 'item' && es.to.gi === gi && es.to.p === p) row += pickRow('item');
+        }
+        return row + itemRows(g, gi, it.children||[], path.concat(it.name), depth+1, ancestorOff || off);
+      }).join('');
+    }
+    function addItemRow(g, gi){
+      if(es.type === 'addItem' && es.gi === gi){
+        var opts = '<option value="">최상위에 추가</option>';
+        (function walk(items, path, depth){ items.forEach(function(it){ var p = path.concat(it.name); opts += '<option value="'+h(p.join(SEP))+'">'+new Array(depth+1).join('　')+'└ '+h(it.name)+' 아래에</option>'; walk(it.children||[], p, depth+1); }); })(g.items, [], 0);
+        return edRow('add', '', '<select id="edsel">'+opts+'</select>');
+      }
+      if(moving) return '';
+      return '<a class="add" data-act="addItem" data-i="'+gi+'">+ 추가</a>';
+    }
+    var groupsHtml = data.groups.map(function(g, i){
+      var isOn = !groupsOff[g.name], open = !!groupsOpen[g.name];
+      var head;
+      if(es.type === 'group' && es.gi === i) head = '<div class="g '+(isOn?'on':'off')+'" style="cursor:default">'+edRow('edit', g.name)+'</div>';
+      else if(es.type === 'delGroup' && es.gi === i) head = '<div class="g '+(isOn?'on':'off')+'" style="cursor:default">'+delRow('묶음 "'+g.name+'" 전체를')+'</div>';
+      else { var gs = isMovingSelf('group', i); head = '<div class="g '+(isOn?'on':'off')+(gs?' moving':'')+'" data-i="'+i+'" data-tgt="group"'+(gs?' data-self="1"':'')+'><div class="box">'+(isOn?'✓':'')+'</div><div class="gn">'+h(g.name)+acts('group', i)+'</div><div class="gc">'+countOn(g)+'/'+countItems(g.items)+'</div><div class="arrow" data-ex="'+i+'">'+(open?'▲':'▼')+'</div></div>';
+        if(es.type === 'movePick' && es.to.kind === 'group' && es.to.gi === i) head += pickRow('group'); }
+      return head + (open ? '<div class="gitems">'+itemRows(g, i, g.items, [], 0, !isOn)+addItemRow(g, i)+'</div>' : '');
+    }).join('');
+    function presetBar(){
+      var ps = presets(), ap = findPreset(activePreset);
+      var chips = ps.map(function(p, i){ return '<span class="chip '+(p.name===activePreset?'on':'')+'" data-pi="'+i+'">'+(p.name===data.defaultPreset?'★ ':'')+h(p.name)+'</span>'; }).join('');
+      var plus = (es.type === 'addPreset') ? '' : '<span class="chip plus" data-act="addPreset">+ 프리셋</span>';
+      var line = '';
+      if(es.type === 'addPreset') line = '<div class="ed" data-ed="1"><input id="edin" placeholder="프리셋 이름 (현재 선택 상태로 저장)"><button id="edok">추가</button><button class="x" id="edx">취소</button></div>';
+      else if(es.type === 'delPreset') line = '<div class="ed" data-ed="1"><span class="q">프리셋 "'+h(es.name)+'" 삭제할까요?</span><button class="d" id="edok">삭제</button><button class="x" id="edx">취소</button></div>';
+      else if(es.type === 'renPreset') line = '<div class="ed" data-ed="1"><input id="edin" value="'+h(es.name)+'"><button id="edok">저장</button><button class="x" id="edx">취소</button></div>';
+      else if(ap) line = '<div class="pacts">'+(selChanged(ap) ? '<span class="chg">선택이 프리셋과 다름</span><a id="pover">현재 선택으로 덮어쓰기</a>' : '<span class="muted" style="font-size:13px">프리셋과 동일</span>')+(ap.name===data.defaultPreset ? '<span style="color:var(--warn)">★ 기본 프리셋</span>' : '<a id="pdef">기본으로 설정</a>')+'<a id="pren">이름 수정</a><a class="del" id="pdel">삭제</a></div>';
+      else line = '<div class="pacts"><span class="muted" style="font-size:13px">프리셋을 누르면 그 선택 상태로 바뀝니다</span></div>';
+      return '<div class="presets">'+chips+plus+'</div>'+line;
+    }
+    var addGroup = moving ? '' : (es.type === 'addGroup') ? '<div class="g" style="cursor:default">'+edRow('add', '')+'</div>' : '<div class="g add" data-act="addGroup">+ 묶음 추가</div>';
+    var movingName = moving ? (moving.kind === 'group' ? '묶음 "'+data.groups[moving.gi].name+'"' : '"'+moving.p.split(SEP).pop()+'"') : '';
+    var banner = moving ? '<div class="banner"><b>'+h(movingName)+' 이동 중 — 목적지 항목(또는 묶음)을 누르세요</b><button id="mvx">취소</button></div>' : '';
+
+    app.innerHTML =
+      '<div class="top"><h1>'+h(data.title)+'</h1>'+voiceBtn()+'</div>'+
+      '<div class="muted">오늘 가져갈 묶음과 장비를 켜고 끄세요. '+(localOverride?'<span style="color:var(--warn)">이 기기에서 수정한 목록</span>':'')+'</div>'+
+      presetBar()+
+      '<div class="links"><a id="allon">전체 켜기</a><a id="alloff">전체 끄기</a><a id="openall">모두 펼치기</a><a id="closeall">모두 접기</a><a id="edit">텍스트로 편집</a><a id="export">배포용 파일 받기</a></div>'+
+      '<div class="status">'+h(saveStatus)+'</div>'+banner+
+      '<div class="glist">'+groupsHtml+addGroup+'</div>'+
+      '<div style="flex:1;min-height:16px"></div>'+
+      '<div class="muted" style="text-align:center">'+enabledGroups().length+'개 묶음 · '+flat.length+'개 항목</div>'+
+      '<button class="btn primary" id="startManual" '+(flat.length?'':'disabled')+'>하나씩 체크</button>'+
+      '<button class="btn primary" id="startQuick" style="background:#7c3aed" '+(flat.length?'':'disabled')+'>빠른 음성 체크</button>'+
+      '<div class="step"><span>항목 간격</span><button id="iv-">−</button><b>'+interval.toFixed(1)+'초</b><button id="iv+">＋</button></div>';
+    bindVoice();
+    var y = window.scrollY;
+    function rerender(){ renderHome(); window.scrollTo(0, y); }
+
+    // 켜기/끄기
+    var mvx = document.getElementById('mvx'); if(mvx) mvx.onclick = function(){ editState = null; rerender(); };
+    function pickTarget(el){ // 이동 모드에서 목적지 선택
+      if(el.getAttribute('data-self')) return;
+      var kind = el.getAttribute('data-tgt'), gi = +el.getAttribute('data-i'), p = el.getAttribute('data-p') || '';
+      if(moving.kind === 'group' && kind === 'item') return; // 묶음은 묶음 사이로만
+      editState = {type:'movePick', from: moving, to:{kind:kind, gi:gi, p:p}}; rerender();
+    }
+    var rows = app.querySelectorAll('.g[data-i]');
+    for(var k=0;k<rows.length;k++){ rows[k].onclick = function(){
+      if(moving){ pickTarget(this); return; }
+      var g = data.groups[+this.getAttribute('data-i')];
+      if(groupsOff[g.name]) delete groupsOff[g.name]; else groupsOff[g.name] = 1;
+      save(LS.goff, groupsOff); rerender();
+    }; }
+    var arrows = app.querySelectorAll('.arrow');
+    for(var a=0;a<arrows.length;a++){ arrows[a].onclick = function(ev){
+      stop(ev); var g = data.groups[+this.getAttribute('data-ex')];
+      if(groupsOpen[g.name]) delete groupsOpen[g.name]; else groupsOpen[g.name] = 1;
+      save(LS.open, groupsOpen); rerender();
+    }; }
+    var its = app.querySelectorAll('.it[data-k]');
+    for(var t=0;t<its.length;t++){ its[t].onclick = function(){
+      if(moving){ pickTarget(this); return; }
+      var key = this.getAttribute('data-k');
+      if(itemsOff[key]) delete itemsOff[key]; else itemsOff[key] = 1;
+      save(LS.ioff, itemsOff); rerender();
+    }; }
+    // 수정/삭제/추가 진입
+    var al = app.querySelectorAll('[data-act]');
+    for(var q=0;q<al.length;q++){ al[q].onclick = function(ev){
+      stop(ev);
+      var act = this.getAttribute('data-act'), type = this.getAttribute('data-type'), gi = +this.getAttribute('data-i'), p = this.getAttribute('data-p') || '';
+      if(act === 'move'){ editState = {type:'move', from:{kind:type, gi:gi, p:p}}; rerender(); return; }
+      if(act === 'edit') editState = {type: type, gi: gi, p: p};
+      else if(act === 'del') editState = {type: type === 'group' ? 'delGroup' : 'delItem', gi: gi, p: p};
+      else if(act === 'addItem') editState = {type:'addItem', gi: gi};
+      else if(act === 'addGroup') editState = {type:'addGroup'};
+      else if(act === 'addPreset') editState = {type:'addPreset'};
+      rerender();
+      var inp = document.getElementById('edin'); if(inp){ inp.focus(); if(act === 'edit') inp.select(); }
+    }; }
+    // 이동 위치 확정
+    var pk = app.querySelector('.pick');
+    if(pk){
+      pk.onclick = stop;
+      var pbs = pk.querySelectorAll('button[data-w]');
+      for(var w=0;w<pbs.length;w++){ pbs[w].onclick = function(ev){ stop(ev); doMove(es.from, es.to, this.getAttribute('data-w')); }; }
+      document.getElementById('edx').onclick = function(ev){ stop(ev); editState = {type:'move', from: es.from}; rerender(); };
+    }
+    // 인라인 입력 처리
+    var edBox = app.querySelector('[data-ed]:not(.pick)');
+    if(edBox){
+      edBox.onclick = stop;
+      var ok = document.getElementById('edok'), x = document.getElementById('edx'), inp = document.getElementById('edin');
+      x.onclick = function(ev){ stop(ev); editState = null; rerender(); };
+      if(inp){ inp.onkeydown = function(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); ok.click(); } if(ev.key === 'Escape') x.click(); }; }
+      ok.onclick = function(ev){
+        stop(ev);
+        var nd = clone(data), s = es, name = inp ? inp.value.trim() : '';
+        if(s.type === 'addPreset'){ if(!name || findPreset(name)) return; var cs = currentSel(); if(!nd.presets) nd.presets = []; nd.presets.push({name:name, goff:cs.goff, ioff:cs.ioff}); activePreset = name; ls(LS.preset, name); commit(nd); return; }
+        if(s.type === 'delPreset'){ nd.presets = (nd.presets||[]).filter(function(x){ return x.name !== s.name; }); if(nd.defaultPreset === s.name) nd.defaultPreset = ''; if(activePreset === s.name){ activePreset = ''; ls(LS.preset, null); } commit(nd); return; }
+        if(s.type === 'renPreset'){ if(!name || (name !== s.name && findPreset(name))) return; (nd.presets||[]).forEach(function(x){ if(x.name === s.name) x.name = name; }); if(nd.defaultPreset === s.name) nd.defaultPreset = name; activePreset = name; ls(LS.preset, name); commit(nd); return; }
+        if(s.type === 'group'){ if(!name) return; var g = nd.groups[s.gi], old = g.name; if(name !== old){ g.name = name;
+            if(groupsOff[old]){ delete groupsOff[old]; groupsOff[name] = 1; save(LS.goff, groupsOff); }
+            if(groupsOpen[old]){ delete groupsOpen[old]; groupsOpen[name] = 1; save(LS.open, groupsOpen); }
+            migrate(old, name, nd); migrateGroupName(nd, old, name); } commit(nd); }
+        else if(s.type === 'delGroup'){ var dg = nd.groups[s.gi]; nd.groups.splice(s.gi, 1); delete groupsOff[dg.name]; delete groupsOpen[dg.name]; save(LS.goff, groupsOff); save(LS.open, groupsOpen); commit(nd); }
+        else if(s.type === 'addGroup'){ if(!name) return; nd.groups.push({name:name, items:[]}); groupsOpen[name] = 1; save(LS.open, groupsOpen); commit(nd); }
+        else if(s.type === 'item'){ if(!name) return; var g2 = nd.groups[s.gi], path = s.p.split(SEP), r = nodeAt(g2, path); if(!r) return;
+            if(r.node.name !== name){ var oldKey = g2.name + SEP + s.p; r.node.name = name; migrate(oldKey, g2.name + SEP + path.slice(0,-1).concat(name).join(SEP), nd); } commit(nd); }
+        else if(s.type === 'delItem'){ var g3 = nd.groups[s.gi], path3 = s.p.split(SEP), r3 = nodeAt(g3, path3.slice(0,-1)); var list = r3 ? (path3.length === 1 ? g3.items : r3.node.children) : null;
+            if(list){ for(var i2=0;i2<list.length;i2++){ if(list[i2].name === path3[path3.length-1]){ list.splice(i2,1); break; } } } commit(nd); }
+        else if(s.type === 'addItem'){ if(!name) return; var g4 = nd.groups[s.gi], sel = document.getElementById('edsel'), pv = sel ? sel.value : '';
+            var target = pv ? nodeAt(g4, pv.split(SEP)) : null; (target ? target.node.children : g4.items).push({name:name, children:[]}); commit(nd); }
+      };
+    }
+    var chips = app.querySelectorAll('.chip[data-pi]');
+    for(var c=0;c<chips.length;c++){ chips[c].onclick = function(){ if(moving) return; var p = presets()[+this.getAttribute('data-pi')]; activePreset = p.name; ls(LS.preset, p.name); applySel(p); editState = null; rerender(); }; }
+    var po = document.getElementById('pover'); if(po) po.onclick = function(){ var nd = clone(data), p = null; nd.presets.forEach(function(x){ if(x.name === activePreset) p = x; }); if(!p) return; var c = currentSel(); p.goff = c.goff; p.ioff = c.ioff; commit(nd); };
+    var pf = document.getElementById('pdef'); if(pf) pf.onclick = function(){ var nd = clone(data); nd.defaultPreset = activePreset; commit(nd); };
+    var pd = document.getElementById('pdel'); if(pd) pd.onclick = function(){ editState = {type:'delPreset', name: activePreset}; rerender(); };
+    var pr = document.getElementById('pren'); if(pr) pr.onclick = function(){ editState = {type:'renPreset', name: activePreset}; rerender(); var i = document.getElementById('edin'); if(i){ i.focus(); i.select(); } };
+    document.getElementById('allon').onclick = function(){ groupsOff = {}; itemsOff = {}; save(LS.goff, {}); save(LS.ioff, {}); rerender(); };
+    document.getElementById('alloff').onclick = function(){ groupsOff = {}; data.groups.forEach(function(g){ groupsOff[g.name]=1; }); save(LS.goff, groupsOff); rerender(); };
+    document.getElementById('openall').onclick = function(){ groupsOpen = {}; data.groups.forEach(function(g){ groupsOpen[g.name]=1; }); save(LS.open, groupsOpen); rerender(); };
+    document.getElementById('closeall').onclick = function(){ groupsOpen = {}; save(LS.open, {}); rerender(); };
+    document.getElementById('edit').onclick = renderEdit;
+    document.getElementById('export').onclick = function(){ exportHtml(); rerender(); };
+    document.getElementById('iv-').onclick = function(){ interval = Math.max(0.5, Math.round((interval - 0.5)*2)/2); ls(LS.interval, String(interval)); rerender(); };
+    document.getElementById('iv+').onclick = function(){ interval = Math.min(10, Math.round((interval + 0.5)*2)/2); ls(LS.interval, String(interval)); rerender(); };
+    document.getElementById('startManual').onclick = function(){ startCheck('manual'); };
+    document.getElementById('startQuick').onclick = function(){ startCheck('quick'); };
+  }
+
+  // 이동 실행. from:{kind,gi,p} to:{kind,gi,p} where: before|after|child|end
+  function doMove(from, to, where){
+    var nd = clone(data);
+    if(from.kind === 'group'){
+      var g = nd.groups.splice(from.gi, 1)[0];
+      var ti = to.gi - (from.gi < to.gi ? 1 : 0) + (where === 'after' ? 1 : 0);
+      nd.groups.splice(ti, 0, g); commit(nd); return;
+    }
+    var fg = nd.groups[from.gi], fpath = from.p.split(SEP);
+    var fr = nodeAt(fg, fpath.slice(0,-1)); var flist = fpath.length === 1 ? fg.items : fr.node.children;
+    var node = null; for(var i=0;i<flist.length;i++){ if(flist[i].name === fpath[fpath.length-1]){ node = flist.splice(i,1)[0]; break; } }
+    if(!node) return;
+    var tg = nd.groups[to.gi], newPath;
+    if(to.kind === 'group' || where === 'end'){ tg.items.push(node); newPath = [node.name]; }
+    else {
+      var tpath = to.p.split(SEP);
+      if(where === 'child'){ var tn = nodeAt(tg, tpath); if(!tn) return; tn.node.children.push(node); newPath = tpath.concat(node.name); }
+      else { var tr = nodeAt(tg, tpath.slice(0,-1)); var tlist = tpath.length === 1 ? tg.items : tr.node.children;
+        var ti2 = -1; for(var j=0;j<tlist.length;j++){ if(tlist[j].name === tpath[tpath.length-1]){ ti2 = j; break; } }
+        if(ti2 < 0) return; tlist.splice(ti2 + (where === 'after' ? 1 : 0), 0, node); newPath = tpath.slice(0,-1).concat(node.name); }
+    }
+    migrate(data.groups[from.gi].name + SEP + from.p, tg.name + SEP + newPath.join(SEP), nd);
+    groupsOpen[tg.name] = 1; save(LS.open, groupsOpen);
+    commit(nd);
+  }
+
+  function startCheck(m){
+    mode = m; idx = 0; lastGrp = null; phase = 'check'; paused = false; editState = null;
+    if(m === 'quick' && !voiceOn){ voiceOn = true; ls(LS.voice, 'on'); }
+    speak(m === 'quick' ? '빠른 체크 시작' : '체크 시작', function(){ setTimeout(renderItem, 200); });
+  }
+
+  // ---------- 체크 화면 ----------
+  function renderItem(){
+    clearQuick();
+    if(idx >= flat.length){ return renderDone(); }
+    var it = flat[idx];
+    var grpChanged = it.grp !== lastGrp; lastGrp = it.grp;
+    var pct = Math.round(idx / flat.length * 100);
+    var parent = it.path.length ? it.path[it.path.length-1] : null;
+    var quick = mode === 'quick';
+    app.innerHTML =
+      '<div class="top"><div class="muted">'+(quick?'<b style="color:#a78bfa">빠른 음성</b> ':'')+(idx+1)+' / '+flat.length+'</div>'+voiceBtn()+'</div>'+
+      '<div class="prog"><div style="width:'+pct+'%"></div></div>'+
+      '<div class="item fade"><div class="grp">'+h(it.grp)+'</div>'+
+      (it.path.length ? '<div class="crumb">'+it.path.map(h).join(' › ')+' ›</div>' : '')+
+      '<div class="name'+(it.path.length?' child':'')+'">'+h(it.name)+'</div>'+
+      (quick ? '<div class="tick"><div id="tick"></div></div><div class="muted" id="qs" style="margin-top:8px">'+(paused?'일시정지됨':'읽는 중…')+'</div>' : '')+
+      '</div>'+
+      '<button class="btn ok" id="ok">확인</button>'+
+      '<button class="btn skip" id="skip">오늘 불필요</button>'+
+      '<div class="row">'+(quick ? '<button class="btn warn" id="pause">'+(paused?'▶ 재개':'❚❚ 일시정지')+'</button>' : '')+'<button class="btn ghost" id="prev" style="flex:0 0 90px">이전</button><button class="btn ghost" id="quit">그만두기</button></div>';
+    bindVoice();
+    var say = (grpChanged ? it.grp + '. ' : '') + (parent ? parent + ', ' : '') + it.name;
+    var answer = function(v){ clearQuick(); stopSpeak(); results[idx] = v; idx++; renderItem(); };
+    var token = ++renderSeq;
+    if(!paused){
+      speak(say, function(){
+        if(phase !== 'check' || !quick || paused || token !== renderSeq) return;
+        var qs = document.getElementById('qs'), tk = document.getElementById('tick');
+        if(qs) qs.textContent = interval.toFixed(1) + '초 후 다음';
+        if(tk){ tk.style.transition = 'width ' + interval + 's linear'; setTimeout(function(){ tk.style.width = '100%'; }, 20); }
+        quickTimer = setTimeout(function(){ answer('ok'); }, interval * 1000);
+      });
+    }
+    document.getElementById('ok').onclick = function(){ answer('ok'); };
+    document.getElementById('skip').onclick = function(){ answer('skip'); };
+    document.getElementById('prev').onclick = function(){ clearQuick(); stopSpeak(); if(idx>0){ idx--; lastGrp=null; } renderItem(); };
+    document.getElementById('quit').onclick = function(){ clearQuick(); stopSpeak(); renderHome(); };
+    var pb = document.getElementById('pause');
+    if(pb) pb.onclick = function(){ paused = !paused; clearQuick(); stopSpeak(); lastGrp = null; renderItem(); };
+  }
+
+  function label(i){ var it = flat[i]; return (it.path.length ? it.path[it.path.length-1] + ' › ' : '') + it.name; }
+
+  function renderDone(){
+    phase = 'done'; clearQuick();
+    var skipped = [];
+    results.forEach(function(r,i){ if(r==='skip') skipped.push(i); });
+    var d = new Date(), stamp = d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    var summary = '['+data.title+'] '+stamp+'\n묶음: '+enabledGroups().map(function(g){return g.name;}).join(', ')+'\n확인 '+(flat.length - skipped.length)+'개' +
+      (skipped.length ? '\n오늘 불필요: ' + skipped.map(label).join(', ') : '');
+    app.innerHTML =
+      '<div class="top"><h1>✅ 체크 완료</h1>'+voiceBtn()+'</div>'+
+      '<div class="muted">'+stamp+' · '+(flat.length - skipped.length)+'개 확인</div>'+
+      (skipped.length ? '<div class="card"><div class="muted">오늘 불필요 '+skipped.length+'개</div><ul>'+skipped.map(function(i){ return '<li><span class="muted">'+h(flat[i].grp)+' · </span>'+h(label(i))+'</li>'; }).join('')+'</ul></div>' : '')+
+      '<div style="flex:1"></div>'+
+      '<button class="btn ghost" id="copy">결과 복사</button><div class="status" id="st"></div>'+
+      '<button class="btn primary" id="home">처음으로</button>';
+    bindVoice();
+    speak('체크 완료. ' + (flat.length - skipped.length) + '개 확인.');
+    document.getElementById('copy').onclick = function(){
+      var st = document.getElementById('st');
+      function showTA(){ st.innerHTML = '<textarea style="min-height:120px;white-space:pre-wrap">'+h(summary)+'</textarea>'; }
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(summary).then(function(){ st.textContent='복사됨'; }).catch(showTA); } else showTA();
+    };
+    document.getElementById('home').onclick = renderHome;
+  }
+
+  // ---------- 텍스트 편집 ----------
+  function renderEdit(){
+    phase = 'edit';
+    var ps = presets(), sel = findPreset(activePreset) ? activePreset : '';
+    var selObj = sel ? findPreset(sel) : currentSel();
+    var chips = '<span class="chip '+(sel?'':'on')+'" data-ep="">현재 선택</span>' + ps.map(function(p){ return '<span class="chip '+(p.name===sel?'on':'')+'" data-ep="'+h(p.name)+'">'+h(p.name)+'</span>'; }).join('');
+    app.innerHTML =
+      '<div class="top"><h1>텍스트로 편집</h1></div>'+
+      '<div class="presets" style="margin-top:6px">'+chips+'</div>'+
+      '<div class="muted" style="font-size:13px;margin-top:4px">'+(sel ? '프리셋 <b>'+h(sel)+'</b>의 켜짐/꺼짐이 <code>x</code>로 표시됩니다. 저장 시 이 프리셋에 반영.' : '이 기기의 현재 선택 상태가 <code>x</code>로 표시됩니다.')+' 칩을 바꾸면 입력 중인 내용은 버려집니다.</div>'+
+      '<div class="card muted" style="font-size:14px;line-height:1.6">'+
+      '<code># 묶음명</code> — 행사별로 켜고 끄는 단위<br>'+
+      '한 줄에 장비 하나. 딸린 장비는 <b>앞에 공백 2칸</b>(또는 <code>&gt;</code>)으로 한 단계 들여쓰기<br>'+
+      '이름 앞에 <code>x </code>를 붙이면 꺼짐. 예) <code>x 서브우퍼</code>, <code># x 드럼 마이크</code><br>'+
+      '묶음 순서 = 체크 순서.</div>'+
+      '<div class="row" style="margin-top:8px"><button class="btn ghost" id="outdent" style="margin:0">← 내어쓰기</button><button class="btn ghost" id="indent" style="margin:0">들여쓰기 →</button><button class="btn ghost" id="xtog" style="margin:0;flex:0 0 72px">x 토글</button></div>'+
+      '<div class="muted" style="font-size:13px;margin-top:4px">키보드: Tab / Shift+Tab. 여러 줄 선택 후 한 번에 가능.</div>'+
+      '<textarea id="ta" spellcheck="false" autocapitalize="off" autocorrect="off">'+h(toText(data, selObj))+'</textarea>'+
+      '<div class="status" id="st">'+(localOverride?'현재 이 기기에서 수정한 목록을 보고 있습니다.':'')+'</div>'+
+      '<button class="btn primary" id="save">저장</button>'+
+      (localOverride ? '<button class="btn ghost" id="reset">배포된 목록으로 되돌리기</button>' : '')+
+      '<button class="btn ghost" id="back">취소</button>';
+    var ta = document.getElementById('ta');
+    var eps = app.querySelectorAll('.chip[data-ep]');
+    for(var c=0;c<eps.length;c++){ eps[c].onclick = function(){ activePreset = this.getAttribute('data-ep'); ls(LS.preset, activePreset || null); renderEdit(); }; }
+    function lineRange(){ var v = ta.value, s0 = ta.selectionStart, e = ta.selectionEnd; var ls0 = v.lastIndexOf('\n', s0 - 1) + 1; var le = v.indexOf('\n', e); if(le < 0) le = v.length; return {v:v, s:s0, e:e, ls0:ls0, le:le}; }
+    function mapLines(fn){
+      var r = lineRange(), lines = r.v.slice(r.ls0, r.le).split('\n'), firstDelta = 0;
+      var out = lines.map(function(l, i){ var nl = fn(l); if(i === 0) firstDelta = nl.length - l.length; return nl; });
+      var nb = out.join('\n');
+      ta.value = r.v.slice(0, r.ls0) + nb + r.v.slice(r.le);
+      if(r.s === r.e){ var ns = Math.max(r.ls0, r.s + firstDelta); ta.selectionStart = ta.selectionEnd = ns; }
+      else { ta.selectionStart = r.ls0; ta.selectionEnd = r.ls0 + nb.length; }
+      ta.focus();
+    }
+    function shiftLines(outdent){ mapLines(function(l){ return outdent ? l.replace(/^(  |\t| )/, '') : '  ' + l; }); }
+    function toggleX(){ mapLines(function(l){
+      var m = l.match(/^(\s*#?\s*)(x\s+)?(.*)$/i); if(!m || !m[3]) return l;
+      return m[1] + (m[2] ? '' : 'x ') + m[3];
+    }); }
+    ta.addEventListener('keydown', function(ev){
+      if(ev.key === 'Tab'){ ev.preventDefault(); shiftLines(ev.shiftKey); return; }
+      if(ev.key === 'Enter' && !ev.shiftKey){
+        var v = ta.value, s0 = ta.selectionStart, ls0 = v.lastIndexOf('\n', s0 - 1) + 1;
+        var lead = (v.slice(ls0, s0).match(/^[ \t]*/) || [''])[0];
+        if(!lead) return;
+        ev.preventDefault();
+        ta.value = v.slice(0, s0) + '\n' + lead + v.slice(ta.selectionEnd);
+        ta.selectionStart = ta.selectionEnd = s0 + 1 + lead.length;
+      }
+    });
+    [['indent', function(){ shiftLines(false); }], ['outdent', function(){ shiftLines(true); }], ['xtog', toggleX]].forEach(function(pair){
+      var b = document.getElementById(pair[0]), keep = function(ev){ ev.preventDefault(); };
+      b.addEventListener('mousedown', keep); b.addEventListener('touchstart', keep, {passive:false});
+      b.onclick = pair[1];
+    });
+    document.getElementById('save').onclick = function(){
+      var parsed = fromText(ta.value), st = document.getElementById('st');
+      if(!parsed.groups.length){ st.textContent='항목이 없습니다.'; return; }
+      var nd = {title: data.title, groups: parsed.groups, presets: clone(data.presets || []), defaultPreset: data.defaultPreset || ''};
+      var thisSel = {goff: parsed.goff, ioff: parsed.ioff};
+      nd.presets.forEach(function(p){ var pr = pruneSel(nd, p); p.goff = pr.goff; p.ioff = pr.ioff; });
+      if(sel){ nd.presets.forEach(function(p){ if(p.name === sel){ p.goff = thisSel.goff; p.ioff = thisSel.ioff; } }); }
+      applySel(thisSel); // 편집한 켜짐/꺼짐을 이 기기 현재 선택에도 적용
+      saveList(nd, function(){ st.textContent = saveStatus; }); st.textContent = saveStatus;
+    };
+    var r = document.getElementById('reset'); if(r) r.onclick = function(){ ls(LS.list, null); data = shared; localOverride = false; renderHome(); };
+    document.getElementById('back').onclick = renderHome;
+  }
+
+  renderHome();
+})();
+</script>
+</body>
+</html>
