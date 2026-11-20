@@ -130,7 +130,8 @@
   var data = shared, localOverride = false;
   try{ var o = ls(LS.list); if(o){ if(ls(LS.rev) !== String(shared.rev || 0)){ ls(LS.list, null); } else { data = JSON.parse(o); localOverride = true; } } }catch(e){}
 
-  var voiceOn = ls(LS.voice) !== 'off';
+  var SHOW_VOICE = false; // 음성 읽기와 음성 켜짐 버튼 사용 여부 (지금은 숨김)
+  var voiceOn = SHOW_VOICE && ls(LS.voice) !== 'off';
   var groupsOff = lsObj(LS.goff), itemsOff = lsObj(LS.ioff), groupsOpen = lsObj(LS.open);
   var interval = parseFloat(ls(LS.interval)); if(!(interval > 0)) interval = 2;
   var activePreset = ls(LS.preset) || '';
@@ -262,7 +263,7 @@
 
   // ---------- 공통 ----------
   function h(s){ return String(s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
-  function voiceBtn(){ return '<button class="toggle '+(voiceOn?'on':'')+'" id="voice">'+(voiceOn?'🔊 음성 켜짐':'🔇 음성 꺼짐')+'</button>'; }
+  function voiceBtn(){ if(!SHOW_VOICE) return ''; return '<button class="toggle '+(voiceOn?'on':'')+'" id="voice">'+(voiceOn?'🔊 음성 켜짐':'🔇 음성 꺼짐')+'</button>'; }
   function bindVoice(){ var b=document.getElementById('voice'); if(b) b.onclick=function(){ voiceOn=!voiceOn; ls(LS.voice, voiceOn?'on':'off'); b.className='toggle '+(voiceOn?'on':''); b.textContent=voiceOn?'🔊 음성 켜짐':'🔇 음성 꺼짐'; if(voiceOn) speak('음성 켜짐'); else stopSpeak(); }; }
   function stop(ev){ ev.stopPropagation(); }
 
